@@ -16,7 +16,7 @@ public class PostingsEntry implements Comparable<PostingsEntry>, Serializable {
     public int docID;
     public double score;
     /** The postings in a document as a linked list. */
-    private LinkedList<Integer> pos;
+    public LinkedList<Integer> pos;
 
 
     public PostingsEntry(int docID) {

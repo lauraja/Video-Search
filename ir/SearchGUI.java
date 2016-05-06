@@ -199,23 +199,33 @@ public class SearchGUI extends JFrame {
 			}*/
 		    }
 		    StringBuffer buf = new StringBuffer();
-		    if ( results != null ) {
-			buf.append( "\nFound " + results.size() + " matching document(s)\n\n" );
-			for ( int i=0; i<results.size(); i++ ) {
-			    buf.append( " " + i + ". " );
-			    String filename = indexer.index.docIDs.get( "" + results.get(i).docID );
-			    if ( filename == null ) {
-				buf.append( "" + results.get(i).docID );
-			    }
-			    else {
-				buf.append( filename );
-			    }
-			    if ( queryType == Index.RANKED_QUERY ) {
-				buf.append( "   " + String.format( "%.5f", results.get(i).score )); 
-			    }
-			    buf.append( "\n" );
-			}
-		    }
+            if ( results != null ) {
+                buf.append( "\nFound " + results.size() + " matching document(s)\n\n" );
+                for ( int i=0; i<results.size(); i++ ) {
+                    buf.append( " " + i + ". " );
+                    String filename = indexer.index.docIDs.get( "" + results.get(i).docID );
+
+                    if ( filename == null ) {
+                        buf.append( "" + results.get(i).docID );
+                    } else {
+                        buf.append( filename );
+                    }
+
+                    if ( queryType == Index.RANKED_QUERY ) {
+                        buf.append( "   " + String.format( "%.5f", results.get(i).score )); 
+                    }
+
+                    // Convert time in minutes + seconds & add it to the string
+                    buf.append( "\n\tAt: " );
+                    for(int offs: results.get(i).pos) {
+                        int minutes = offs / 60;
+                        int seconds = offs % 60;
+                        buf.append(String.format("%02d", minutes) + ":" + String.format("%02d", seconds) + ", ");
+                    }
+                    buf.setLength(buf.length() - 2); // Remove the last extra comma
+                    buf.append( "\n\n" );
+                }
+            }
 		    else {
 			buf.append( "\nFound 0 matching document(s)\n\n" );
 		    }
