@@ -428,10 +428,7 @@ public class SearchGUI extends JFrame {
     public static void main( String[] args ) {
 	SearchGUI s = new SearchGUI();
 	s.createGUI();
-	String[] document = new String[2];
-	document[0] = "-d";
-	document[1] = "C:/Users/user/Downloads/lauraja.tar/lauraja/ir/myFiles";
-	s.decodeArgs(document);
+	s.decodeArgs(args);
 	s.index();
     }
 
