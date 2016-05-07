@@ -41,6 +41,7 @@ public interface Index {
     public HashMap<String, String> docIDs = new HashMap<String,String>();
     public HashMap<String,Integer> docLengths = new HashMap<String,Integer>();
     public HashMap<String,Integer> docLengthsExtended = new HashMap<String,Integer>();
+    public HashMap<String,Integer> docTimeFrame = new HashMap<String,Integer>();
     public LinkedList<Double> pageRank = new LinkedList<Double>();
 
     public void insert( String token, int docID, int frame );
@@ -50,7 +51,7 @@ public interface Index {
     public PostingsList getPostings( String token );
     public boolean containsToken (String token);
     public int getSize();
-    public PostingsList search( Query query, int queryType, int rankingType, int frameType, double weightPopularity, double[] popularityScores, int distanceFrames);
+    public PostingsList search( Query query, int queryType, int rankingType, int frameType, double weightPopularity, double[] popularityScores, int distanceFrames, boolean optimization, double idf_threshold, boolean addition, double sweight_addition);
     public void cleanup();
 
 }

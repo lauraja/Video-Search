@@ -13,6 +13,7 @@ import java.io.File;
 import java.io.Reader;
 import java.io.FileReader;
 import java.io.StringReader;
+import java.util.LinkedList;
 import java.io.IOException;
 
 //Reading JSON files
@@ -88,10 +89,53 @@ public class Indexer {
 				int docID = generateDocID();
 				index.docIDs.put( "" + docID, f.getPath() );
 				try {
-					JSONParser parser = new JSONParser();
-					Object obj = parser.parse(new FileReader(f));
+					int length = 0 , extendedLength = 0;
+					
+					/***************************************************
+					 *      GETTING INFORMATION FROM JSON FILE         *
+					 *              (file with metadata)               *
+					 **************************************************/
+					//Getting the name of the file
+					int nameFile = f.getPath().lastIndexOf("\\");
+					int posFolder = f.getPath().substring(0,nameFile).lastIndexOf("\\");
+					int position = f.getPath().lastIndexOf("d");
+					String file = f.getPath().substring(0,posFolder)+ "\\Metadata" +f.getPath().substring(nameFile,position) +'m'+f.getPath().substring(position+1);
 
+					JSONParser parser = new JSONParser();
+					
+					Object obj = parser.parse(new FileReader(file));
 					JSONObject jsonObject = (JSONObject) obj;
+
+					JSONArray items = (JSONArray) jsonObject.get("items");
+
+					JSONObject item = (JSONObject) items.get(0);
+					JSONObject information = (JSONObject) item.get("snippet");
+					
+					String title = (String) information.get("title");
+					title = title + " " + (String) information.get("description");
+					
+					Reader reader = new StringReader(title);
+					
+					SimpleTokenizer tok = new SimpleTokenizer( reader );
+					int tokens = 0;
+					while ( tok.hasMoreTokens() ) {
+						String token = tok.nextToken();
+						//Adding additional information to frame "-1"
+						insertIntoIndex(index, docID, token, -1);
+						insertIntoIndex(longIndex, docID, token, -1);
+						tokens++;
+					}
+					length += tokens;
+					reader.close();
+					
+					
+					/***************************************************
+					 *      GETTING INFORMATION FROM JSON FILE         *
+					 *            (file with description)              *
+					 **************************************************/
+					
+					obj = parser.parse(new FileReader(f));
+					jsonObject = (JSONObject) obj;
 
 					JSONArray listFrames = (JSONArray) jsonObject.get("imgblobs");
 					
@@ -102,22 +146,31 @@ public class Indexer {
 						JSONObject candidate = (JSONObject) frame.get("candidate");
 						double probability = (double) candidate.get("logprob");
 						
+						if (i == 1) {
+							//Taking the amount of time between two frames
+							//At i=0, t =0, so we have to look at second frame
+							Double time = (Double) frame.get("time [s]");
+							int timeFrame = time.intValue();
+							index.docTimeFrame.put( "" + docID, timeFrame);
+						}
+						
 						if (probability > thresholdProbability) {
 							//If it is sure enough, we had info to index
 							String description = (String) candidate.get("text");
-							Reader reader = new StringReader(description);
+							reader = new StringReader(description);
 							Double time = (Double) frame.get("time [s]");
 							int Nbframe = time.intValue();
 							
 							//Normal description
-							SimpleTokenizer tok = new SimpleTokenizer( reader );
-							int tokens = 0;
+							tok = new SimpleTokenizer( reader );
+							tokens = 0;
 							while ( tok.hasMoreTokens() ) {
 								String token = tok.nextToken();
 								insertIntoIndex(index, docID, token, Nbframe);
 								tokens++;
 							}
-							index.docLengths.put( "" + docID, tokens );
+							
+							length += tokens;
 							reader.close();
 							
 							//Extended description
@@ -130,10 +183,12 @@ public class Indexer {
 								insertIntoIndex(longIndex, docID, token, Nbframe);
 								tokens++;
 							}
-							index.docLengthsExtended.put( "" + docID, tokens);
+							extendedLength += tokens;
 							reader.close();
 						}
 					}
+					index.docLengths.put( "" + docID, length );
+					index.docLengthsExtended.put( "" + docID, extendedLength);
 				}
 				catch ( IOException e ) {
 					e.printStackTrace();

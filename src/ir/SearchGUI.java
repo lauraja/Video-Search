@@ -24,9 +24,15 @@ public class SearchGUI extends JFrame {
 	double weightPopularity = 0.5;
 	double alpha = 1;
 	double beta = 0.5;
-	double thresholdProbability = -8;
+	double thresholdProbability = -10;
 	double[] popularityScores ={0.3, 0.3, 0.3};
 	int distanceFrames = 3;
+	//For ranked retrieval
+	boolean optimization = false;    
+	double idf_threshold = 0.0001;
+	//For additional info (title, description,...)
+	boolean addition = false;
+	double weight_addition = 0.2;
 	
     /**  The indexer creating the search index. */
     Indexer indexer = new Indexer();
@@ -146,6 +152,7 @@ public class SearchGUI extends JFrame {
 	intersectionItem.setSelected( true );
 	tfidfItem.setSelected( true );
 	unigramItem.setSelected( true );
+	allFramesItem.setSelected(true);
 	p.add( menuBar );
 	// Logo
 	JPanel p1 = new JPanel();
@@ -185,9 +192,9 @@ public class SearchGUI extends JFrame {
 		    // (this might corrupt the index).
 		    synchronized ( indexLock ) {
 			if (structureType == Index.UNIGRAM) {
-			    	results = indexer.index.search(query, queryType, rankingType, frameType, weightPopularity, popularityScores, distanceFrames);
+			    	results = indexer.index.search(query, queryType, rankingType, frameType, weightPopularity, popularityScores, distanceFrames, optimization, idf_threshold, addition, weight_addition);
 			} else if (structureType == Index.BIGRAM) {
-				results = indexer.longIndex.search(query, queryType, rankingType, frameType, weightPopularity, popularityScores, distanceFrames);
+				results = indexer.longIndex.search(query, queryType, rankingType, frameType, weightPopularity, popularityScores, distanceFrames, optimization, idf_threshold, addition, weight_addition);
 		        } /*else if (structureType == Index.SUBPHRASE) {
 				results = indexer.biwordIndex.search(query, queryType, rankingType, structureType,alphaWindow.getText());
 				
@@ -199,33 +206,23 @@ public class SearchGUI extends JFrame {
 			}*/
 		    }
 		    StringBuffer buf = new StringBuffer();
-            if ( results != null ) {
-                buf.append( "\nFound " + results.size() + " matching document(s)\n\n" );
-                for ( int i=0; i<results.size(); i++ ) {
-                    buf.append( " " + i + ". " );
-                    String filename = indexer.index.docIDs.get( "" + results.get(i).docID );
-
-                    if ( filename == null ) {
-                        buf.append( "" + results.get(i).docID );
-                    } else {
-                        buf.append( filename );
-                    }
-
-                    if ( queryType == Index.RANKED_QUERY ) {
-                        buf.append( "   " + String.format( "%.5f", results.get(i).score )); 
-                    }
-
-                    // Convert time in minutes + seconds & add it to the string
-                    buf.append( "\n\tAt: " );
-                    for(int offs: results.get(i).pos) {
-                        int minutes = offs / 60;
-                        int seconds = offs % 60;
-                        buf.append(String.format("%02d", minutes) + ":" + String.format("%02d", seconds) + ", ");
-                    }
-                    buf.setLength(buf.length() - 2); // Remove the last extra comma
-                    buf.append( "\n\n" );
-                }
-            }
+		    if ( results != null ) {
+			buf.append( "\nFound " + results.size() + " matching document(s)\n\n" );
+			for ( int i=0; i<results.size(); i++ ) {
+			    buf.append( " " + i + ". " );
+			    String filename = indexer.index.docIDs.get( "" + results.get(i).docID );
+			    if ( filename == null ) {
+				buf.append( "" + results.get(i).docID );
+			    }
+			    else {
+				buf.append( filename );
+			    }
+			    if ( queryType == Index.RANKED_QUERY ) {
+				buf.append( "   " + String.format( "%.5f", results.get(i).score )); 
+			    }
+			    buf.append( "\n" );
+			}
+		    }
 		    else {
 			buf.append( "\nFound 0 matching document(s)\n\n" );
 		    }
@@ -264,9 +261,9 @@ public class SearchGUI extends JFrame {
 			    //large and anyway add the tokens and their postingslist to the index
 			    //in the working memory
 			    if (structureType == Index.UNIGRAM) {
-			    	results = indexer.index.search(query, queryType, rankingType, frameType, weightPopularity, popularityScores, distanceFrames);
+			    	results = indexer.index.search(query, queryType, rankingType, frameType, weightPopularity, popularityScores, distanceFrames, optimization, idf_threshold, addition, weight_addition);
 			    } else if (structureType == Index.BIGRAM) {
-				results = indexer.longIndex.search(query, queryType, rankingType, frameType, weightPopularity, popularityScores, distanceFrames);
+			    	results = indexer.longIndex.search(query, queryType, rankingType, frameType, weightPopularity, popularityScores, distanceFrames, optimization, idf_threshold, addition, weight_addition);
 			    }
 			}
 			buf.append( "\nSearch after relevance feedback:\n" );
@@ -426,10 +423,13 @@ public class SearchGUI extends JFrame {
 
 
     public static void main( String[] args ) {
-	SearchGUI s = new SearchGUI();
-	s.createGUI();
-	s.decodeArgs(args);
-	s.index();
+		SearchGUI s = new SearchGUI();
+		s.createGUI();
+		String[] document = new String[2];
+		document[0] = "-d";
+		document[1] = "C:/Users/user/Downloads/lauraja.tar/lauraja/ir/myFiles";
+		s.decodeArgs(document);
+		s.index();
     }
 
 }

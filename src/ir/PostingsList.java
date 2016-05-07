@@ -27,10 +27,6 @@ import java.lang.Math;
  *   A list of postings for a given word.
  */
 public class PostingsList implements Serializable {
-	/** Variables to choose at the computation **/
-	private boolean OPTIMIZATION = true;    
-	private double IDF_THRESHOLD = 0.0001;
-
 	/** The postings list as a linked list. */
 	private LinkedList<PostingsEntry> list = new LinkedList<PostingsEntry>();
 
@@ -127,17 +123,22 @@ public class PostingsList implements Serializable {
 	}
 
 	/* Computation of the cosine score for a certain term*/
-	public HashMap<String,Double> addIdfScore(HashMap<String,Double> scores, String term, double weight, int nbDocs){    	   
+	public HashMap<String,Double> addIdfScore(HashMap<String,Double> scores, String term, double weight, int nbDocs, boolean optimization, double idf_threshold, boolean addition, double weight_addition){    	   
+		//Deleting unrelevant information if additional information is not used
+		if (!addition) {
+			this.deleteAddition();
+		}
+		
 		//Calculation of idft
 		int dft=this.size();
-		double termIDF=Math.log((double)nbDocs/(double)dft);    	
+		double termIDF=Math.log((double)nbDocs/(double)dft);  
 		termIDF=termIDF*weight;
 
 		//Implementation of optimization 
-		if(OPTIMIZATION){
+		if(optimization){
 			//If IDF is less than the threshold, skip word
 			//We skip by not adding scores to the hashmap
-			if(termIDF < IDF_THRESHOLD){
+			if(termIDF < idf_threshold){
 				return scores;	
 			}
 		}
@@ -148,6 +149,20 @@ public class PostingsList implements Serializable {
 			double tf=(double)entry.getSizePos();
 			double tf_idf=tf*termIDF;
 			Double curScore=scores.get(""+entry.getDocID());
+			
+			//If addition information is taken into account
+			if (addition) {
+				int nbAdditional = 0;
+				int pos = 0;	// Looking at all values of positions to see how many are additional
+				while (entry.getPos(pos) == -1 && pos < entry.getSizePos()) {
+					//If it was in additional info
+					nbAdditional++;
+					pos++;
+				}
+				//Updating the counting
+				tf_idf *= (1 - (1-weight_addition)*nbAdditional/tf);
+			}
+			
 			if(curScore==null){
 				curScore=tf_idf;	
 			}
@@ -176,7 +191,7 @@ public class PostingsList implements Serializable {
 		}
 		return scores;
 	}
-	
+
 	/** Calculating the popularity of a file **/
 	public double getPopularity(String filename, double[] popularityScores, HashMap<String,String> docIDs) {
 		int nameFile = filename.lastIndexOf("\\");
@@ -190,15 +205,15 @@ public class PostingsList implements Serializable {
 			JSONObject jsonObject = (JSONObject) obj;
 
 			JSONArray items = (JSONArray) jsonObject.get("items");
-			
+
 			JSONObject item = (JSONObject) items.get(0);
 			JSONObject stat = (JSONObject) item.get("statistics");
-			
+
 			//Calculating each part of the formula for popularity
 			double firstPart = (10*Double.parseDouble((String) stat.get("favoriteCount")) + Double.parseDouble((String) stat.get("likeCount")) + Double.parseDouble((String) stat.get("dislikeCount")))/10.0;
 			double secondPart = Double.parseDouble((String) stat.get("viewCount"));
 			double thirdPart = Double.parseDouble((String) stat.get("commentCount"))/10.0;
-			
+
 			//Adding popularity
 			double popularity = popularityScores[0] * Math.sqrt(firstPart) + popularityScores[1]* Math.cbrt(secondPart) + popularityScores[2] * Math.sqrt(thirdPart);
 			return popularity;
@@ -215,7 +230,7 @@ public class PostingsList implements Serializable {
 			double scoreIDF = list.get(i).getScore();
 			String filename = docIDs.get(""+ list.get(i).getDocID());
 			double popularity = getPopularity(filename, popularityScores,docIDs);
-			
+
 			double newScore = alpha*scoreIDF + (1-alpha) * popularity / 1000;
 			list.get(i).changeScore(newScore);
 		}
@@ -224,7 +239,7 @@ public class PostingsList implements Serializable {
 	/**
 	 * Finding the intersection of query terms
 	 */
-	public PostingsList intersection(PostingsList otherList){
+	public PostingsList intersection(PostingsList otherList, int distanceFrames,HashMap<String,Integer> docTimeFrame){
 		if (list.size() == 0) {
 			return this;
 		}
@@ -237,18 +252,55 @@ public class PostingsList implements Serializable {
 		temp = (LinkedList<PostingsEntry>) list.clone();
 		LinkedList<PostingsEntry> other = new LinkedList<PostingsEntry>();
 		other = (LinkedList<PostingsEntry>) otherList.getList().clone();
-
+		
 		//Getting the first postings entry
-		PostingsEntry entry1 = temp.getFirst();
-		PostingsEntry entry2 = other.getFirst();
-
+		PostingsEntry entry1 = temp.remove();
+		PostingsEntry entry2 = other.remove();
+		
 		while (temp.size() != 0 && other.size() != 0){
 			if (entry1.docID == entry2.docID) {
-				//Same document -> add to answer and remove both entries
-				//Different document -> delete the smallest entry
-				answer.addAnswer(entry1.docID, entry1.score);
-				entry1 = temp.remove();
-				entry2 = other.remove();
+				if (distanceFrames == 0) {
+					//Same document -> add to answer and remove both entries
+					//Different document -> delete the smallest entry
+					answer.addAnswer(entry1.docID, entry1.score);
+					entry1 = temp.remove();
+					entry2 = other.remove();
+				} else  {
+					//Checking that it is in close frames
+					LinkedList<Integer> position1 = entry1.getPos();
+					LinkedList<Integer> position2 = entry2.getPos();
+					boolean first = true;
+					
+					int timeFrame = docTimeFrame.get("" + entry1.docID);
+					//Find if the second token is after the first one
+					//for each repetition of the first token
+					while (position1.size() > 0 ){
+						while (position2.size() > 0) {
+							if (Math.abs(position1.get(0) - position2.get(0)) < distanceFrames * timeFrame) {
+								if (first) {
+									answer.add(entry1.docID, position2.get(0), entry1.score);
+									first = false;
+								} else {
+									answer.addPosting(entry1.docID, position2.get(0));
+								}
+								//Taking the smallest away, otherwise infinite loop
+								if (position1.get(0) < position2.get(0)) {
+									position1.removeFirst();
+								} else { position2.removeFirst();}
+								
+							//If the times are too far, deleting the smallest one
+							} else if (position1.get(0) - position2.get(0) > distanceFrames * timeFrame) {
+								position2.removeFirst();
+							} else if (position1.get(0) - position2.get(0) < distanceFrames * timeFrame) {
+								position1.removeFirst();
+							}
+							
+						}
+					}
+					entry1 = temp.remove();
+					entry2 = other.remove();
+				}
+			//If documents are different, deleting the one with smallest ID
 			} else if (entry1.docID < entry2.docID) {
 				entry1 = temp.remove();
 			} else {
@@ -259,14 +311,82 @@ public class PostingsList implements Serializable {
 		//One postingslist's size is equal to 0 only other entries to look at
 		if (temp.size() == 0 || other.size() == 0) {
 			if (entry1.docID == entry2.docID) {
-				answer.addAnswer(entry1.docID, entry1.score);
-				//end the other will be bigger then
+				if (distanceFrames == 0) {
+					answer.addAnswer(entry1.docID, entry1.score);
+				} else  {
+					//Checking that it is in close frames
+					LinkedList<Integer> position1 = entry1.getPos();
+					LinkedList<Integer> position2 = entry2.getPos();
+					boolean first = true;
+					
+					int timeFrame = docTimeFrame.get("" + entry1.docID);
+					//Find if the second token is after the first one
+					//for each repetition of the first token
+					while (position1.size() > 0 ){
+						while (position2.size() > 0) {
+							if (Math.abs(position1.get(0) - position2.get(0)) < distanceFrames * timeFrame) {
+								if (first) {
+									answer.add(entry1.docID, position2.get(0), entry1.score);
+									first = false;
+								} else {
+									answer.addPosting(entry1.docID, position2.get(0));
+								}
+								//Taking the smallest away, otherwise infinite loop
+								if (position1.get(0) < position2.get(0)) {
+									position1.removeFirst();
+								} else { position2.removeFirst();}
+								
+							//If the times are too far, deleting the smallest one
+							} else if (position1.get(0) - position2.get(0) > distanceFrames * timeFrame) {
+								position2.removeFirst();
+							} else if (position1.get(0) - position2.get(0) < distanceFrames * timeFrame) {
+								position1.removeFirst();
+							}
+							
+						}
+					}
+				}	
 			}
 			else if (entry1.docID < entry2.docID) {
 				while (temp.size() != 0) {
 					entry1 = temp.remove();
 					if (entry1.docID == entry2.docID) {
-						answer.addAnswer(entry1.docID, entry1.score);
+						if (distanceFrames == 0) {
+							//Same document -> add to answer and remove both entries
+							//Different document -> delete the smallest entry
+							answer.addAnswer(entry1.docID, entry1.score);
+						} else  {
+							//Checking that it is in close frames
+							LinkedList<Integer> position1 = entry1.getPos();
+							LinkedList<Integer> position2 = entry2.getPos();
+							boolean first = true;
+							
+							int timeFrame = docTimeFrame.get("" + entry1.docID);
+							//Find if the second token is after the first one
+							//for each repetition of the first token
+							while (position1.size() > 0 ){
+								while (position2.size() > 0) {
+									if (Math.abs(position1.get(0) - position2.get(0)) < distanceFrames * timeFrame) {
+										if (first) {
+											answer.add(entry1.docID, position2.get(0), entry1.score);
+											first = false;
+										} else {
+											answer.addPosting(entry1.docID, position2.get(0));
+										}
+										//Taking the smallest away, otherwise infinite loop
+										if (position1.get(0) < position2.get(0)) {
+											position1.removeFirst();
+										} else { position2.removeFirst();}
+										
+									//If the times are too far, deleting the smallest one
+									} else if (position1.get(0) - position2.get(0) > distanceFrames * timeFrame) {
+										position2.removeFirst();
+									} else if (position1.get(0) - position2.get(0) < distanceFrames * timeFrame) {
+										position1.removeFirst();
+									}
+								}
+							}
+						}
 						break;
 						//end the other will be bigger then
 					}
@@ -275,71 +395,42 @@ public class PostingsList implements Serializable {
 				while (other.size() != 0) {
 					entry2 = other.remove();
 					if (entry1.docID == entry2.docID) {
-						answer.addAnswer(entry1.docID, entry1.score);
-						break;
-						//end the other will be bigger then
-					}
-				}
-			}
-		}
-		return answer;
-	}
-	
-	/**
-	 * Finding the intersection of query terms
-	 */
-	public PostingsList intersection(PostingsList otherList, int distanceFrames){
-		if (list.size() == 0) {
-			return this;
-		}
-
-		//Initialization of the answer as a Postingslist
-		PostingsList answer = new PostingsList();
-
-		//Getting and cloning the two postingslist to intersect
-		LinkedList<PostingsEntry> temp = new LinkedList<PostingsEntry>();
-		temp = (LinkedList<PostingsEntry>) list.clone();
-		LinkedList<PostingsEntry> other = new LinkedList<PostingsEntry>();
-		other = (LinkedList<PostingsEntry>) otherList.getList().clone();
-
-		//Getting the first postings entry
-		PostingsEntry entry1 = temp.getFirst();
-		PostingsEntry entry2 = other.getFirst();
-
-		while (temp.size() != 0 && other.size() != 0){
-			if (entry1.docID == entry2.docID) {
-				//Same document -> add to answer and remove both entries
-				//Different document -> delete the smallest entry
-				answer.addAnswer(entry1.docID, entry1.score);
-				entry1 = temp.remove();
-				entry2 = other.remove();
-			} else if (entry1.docID < entry2.docID) {
-				entry1 = temp.remove();
-			} else {
-				entry2 = other.remove();
-			}
-		}
-
-		//One postingslist's size is equal to 0 only other entries to look at
-		if (temp.size() == 0 || other.size() == 0) {
-			if (entry1.docID == entry2.docID) {
-				answer.addAnswer(entry1.docID, entry1.score);
-				//end the other will be bigger then
-			}
-			else if (entry1.docID < entry2.docID) {
-				while (temp.size() != 0) {
-					entry1 = temp.remove();
-					if (entry1.docID == entry2.docID) {
-						answer.addAnswer(entry1.docID, entry1.score);
-						break;
-						//end the other will be bigger then
-					}
-				}
-			} else {
-				while (other.size() != 0) {
-					entry2 = other.remove();
-					if (entry1.docID == entry2.docID) {
-						answer.addAnswer(entry1.docID, entry1.score);
+						if (distanceFrames == 0) {
+							//Same document -> add to answer and remove both entries
+							//Different document -> delete the smallest entry
+							answer.addAnswer(entry1.docID, entry1.score);
+						} else  {
+							//Checking that it is in close frames
+							LinkedList<Integer> position1 = entry1.getPos();
+							LinkedList<Integer> position2 = entry2.getPos();
+							boolean first = true;
+							
+							int timeFrame = docTimeFrame.get("" + entry1.docID);
+							//Find if the second token is after the first one
+							//for each repetition of the first token
+							while (position1.size() > 0 ){
+								while (position2.size() > 0) {
+									if (Math.abs(position1.get(0) - position2.get(0)) < distanceFrames * timeFrame) {
+										if (first) {
+											answer.add(entry1.docID, position2.get(0), entry1.score);
+											first = false;
+										} else {
+											answer.addPosting(entry1.docID, position2.get(0));
+										}
+										//Taking the smallest away, otherwise infinite loop
+										if (position1.get(0) < position2.get(0)) {
+											position1.removeFirst();
+										} else { position2.removeFirst();}
+										
+									//If the times are too far, deleting the smallest one
+									} else if (position1.get(0) - position2.get(0) > distanceFrames * timeFrame) {
+										position2.removeFirst();
+									} else if (position1.get(0) - position2.get(0) < distanceFrames * timeFrame) {
+										position1.removeFirst();
+									}		
+								}
+							}
+						}
 						break;
 						//end the other will be bigger then
 					}
@@ -352,7 +443,7 @@ public class PostingsList implements Serializable {
 	/**
 	 * Finding the phrase intersection of query terms
 	 */
-	public PostingsList phraseIntersect( PostingsList otherList){
+	public PostingsList phraseIntersect(PostingsList otherList){
 		if (list.size() == 0) {
 			return this;
 		}
@@ -367,8 +458,8 @@ public class PostingsList implements Serializable {
 		other = (LinkedList<PostingsEntry>) otherList.getList().clone();
 
 		//Getting the first postings entry
-		PostingsEntry entry1 = temp.getFirst();
-		PostingsEntry entry2 = other.getFirst();
+		PostingsEntry entry1 = temp.remove();
+		PostingsEntry entry2 = other.remove();
 
 		while (temp.size() != 0 && other.size() != 0){
 			//Same docID -> Search if it is following words or not
@@ -383,12 +474,12 @@ public class PostingsList implements Serializable {
 					//Find if the second token is after the first one
 					//for each repetition of the first token
 					for (int i = 0; i < position1.size(); i++) {
-						if (position2.contains(position1.get(i)+1)) {
+						if (position2.contains(position1.get(i))) {
 							if (first) {
-								answer.add(entry1.docID, position1.get(i)+1, entry1.score);
+								answer.add(entry1.docID, position1.get(i), entry1.score);
 								first = false;
 							} else {
-								answer.addPosting(entry1.docID, position1.get(i)+1);
+								answer.addPosting(entry1.docID, position1.get(i));
 							}
 						}
 					}
@@ -397,7 +488,7 @@ public class PostingsList implements Serializable {
 					for (int i = 0; i < position2.size(); i++) {
 						//Find if the first token is before the second one
 						//for each repetition of the second token
-						if (position1.contains(position2.get(i)-1)) {
+						if (position1.contains(position2.get(i))) {
 							if (first) {
 								answer.add(entry1.docID, position2.get(i), entry1.score);
 								first = false;
@@ -425,16 +516,17 @@ public class PostingsList implements Serializable {
 			boolean first = true;
 			if (position1.size() <= position2.size()) {
 				for (int i = 0; i < position1.size(); i++) {
-					if (position2.contains(position1.get(i)+1)) {
+					if (position2.contains(position1.get(i))) {
 						if (first) {
-							answer.add(entry1.docID, position1.get(i)+1, entry1.score);    						first = false;
+							answer.add(entry1.docID, position1.get(i), entry1.score);    						first = false;
 						} else {
-							answer.addPosting(entry1.docID, position1.get(i)+1);    						}
+							answer.addPosting(entry1.docID, position1.get(i));    						
+						}
 					}
 				}
 			} else {
 				for (int i = 0; i < position2.size(); i++) {
-					if (position1.contains(position2.get(i)-1)) {
+					if (position1.contains(position2.get(i))) {
 						if (first) {
 							answer.add(entry1.docID, position2.get(i), entry1.score);
 							first = false;
@@ -447,6 +539,34 @@ public class PostingsList implements Serializable {
 		}
 
 		return answer;
+	}
+	
+	/** Delete all the information that was in the additional information **/
+	public void deleteAddition() {
+		LinkedList<Integer> toDelete = new LinkedList<Integer>();
+		for (int i =0; i< this.size(); i++) {
+			//Look at all the documents
+			PostingsEntry entry = this.get(i);
+			int pos = entry.getFirstPos();
+			while (pos == -1) {
+				//If it was in additional info
+				entry.deleteFirstPos();
+				if (entry.getSizePos() > 0) {
+					pos = entry.getFirstPos();
+				} else {
+					pos = 0;
+				}
+			}
+			//If word was only in the additional part
+			//PostingsEntry to delete
+			if (entry.getSizePos() == 0) {
+				toDelete.add(i);
+			}
+		}
+		for (int i = toDelete.size()-1; i >=0 ; i--) {
+			int delete = toDelete.get(i);
+			this.list.remove(delete);
+		}
 	}
 }
 

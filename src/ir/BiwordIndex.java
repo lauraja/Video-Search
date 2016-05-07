@@ -122,7 +122,7 @@ public class BiwordIndex implements Index {
     /**
      *  Searches the index for postings matching the query using biwords.
      */
-    public PostingsList search(Query query, int queryType, int rankingType, int frameType, double weightPopularity, double[] popularityScores, int distanceFrames) {
+    public PostingsList search(Query query, int queryType, int rankingType, int frameType, double weightPopularity, double[] popularityScores, int distanceFrames, boolean optimization, double idf_threshold, boolean addition, double weight_addition) {
 	System.out.println("size:"+query.terms.size());
 	Query q = query.copy();
 	if (q.terms.size() < 2) {
@@ -158,7 +158,7 @@ public class BiwordIndex implements Index {
 				double weight = w.remove();
 	    			PostingsList posts = getPostings(term);
 				if (posts != null && posts.size() !=0) {
-	    				scores = posts.addIdfScore(scores, term, weight, nbDoc);
+	    				scores = posts.addIdfScore(scores, term, weight, nbDoc, optimization, idf_threshold, addition, weight_addition);
 				}
 	    		}
 	    	    	//Divide scores by docLength
@@ -203,7 +203,7 @@ public class BiwordIndex implements Index {
 				double weight = w.remove();
 	    			PostingsList posts = getPostings(term);
 				if (posts != null) {
-	    				scores = posts.addIdfScore(scores, term, weight, nbDoc);
+	    				scores = posts.addIdfScore(scores, term, weight, nbDoc, optimization, idf_threshold, addition, weight_addition);
 				}
 	    		}
 			Iterator<String> keys=scores.keySet().iterator();

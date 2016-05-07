@@ -112,7 +112,7 @@ public class HashedIndex implements Index {
 	/**
 	 *  Searches the index for postings matching the query.
 	 */
-	public PostingsList search(Query query, int queryType, int rankingType, int frameType, double weightPopularity, double[] popularityScores, int distanceFrames) {
+	public PostingsList search(Query query, int queryType, int rankingType, int frameType, double weightPopularity, double[] popularityScores, int distanceFrames, boolean optimization, double idf_threshold, boolean addition, double weight_addition) {
 		Query q = query.copy();
 		LinkedList<String> t = q.terms;
 		LinkedList<Double> w = q.weights;
@@ -124,6 +124,7 @@ public class HashedIndex implements Index {
 		//Intersection query
 		if (queryType == Index.INTERSECTION_QUERY) {
 			PostingsList intersect = getPostings(t.remove());
+			
 			if (intersect == null ) {intersect = new PostingsList();}
 			while (t.size() != 0){
 				PostingsList posts = getPostings(t.remove());
@@ -131,23 +132,32 @@ public class HashedIndex implements Index {
 					return null;
 				} else {
 					if (frameType == Index.ALLFRAMES) {
-						intersect  = intersect.intersection(posts);
+						intersect  = intersect.intersection(posts,0,docTimeFrame);
 					} else {
-						intersect = intersect.intersection(posts,distanceFrames);
-					}
+						intersect = intersect.intersection(posts,distanceFrames, docTimeFrame);
+					}					
 				}
+			}
+			if (! addition) {
+				intersect.deleteAddition();
 			}
 			return intersect;
 
 			//Phrase query
 		} else if (queryType == Index.PHRASE_QUERY) {
 			PostingsList phrase_answer = getPostings(t.remove());
+			if (!addition) {
+				phrase_answer.deleteAddition();
+			}
 			if (phrase_answer == null) {phrase_answer = new PostingsList();}
 			while (t.size() != 0){
 				PostingsList posts = getPostings(t.remove());
 				if (posts == null) { 
 					return null;
 				} else { 
+					if (!addition) {
+						posts.deleteAddition();
+					}
 					phrase_answer = phrase_answer.phraseIntersect(posts);
 				}
 			}
@@ -170,7 +180,7 @@ public class HashedIndex implements Index {
 					double weight = w.remove();
 					PostingsList posts = getPostings(term);
 					if (posts != null && posts.size() !=0) {
-						scores = posts.addIdfScore(scores, term, weight, nbDoc);
+						scores = posts.addIdfScore(scores, term, weight, nbDoc, optimization, idf_threshold, addition, weight_addition);
 					}
 				}
 				//Divide scores by docLength
@@ -215,7 +225,7 @@ public class HashedIndex implements Index {
 					double weight = w.remove();
 					PostingsList posts = getPostings(term);
 					if (posts != null) {
-						scores = posts.addIdfScore(scores, term, weight, nbDoc);
+						scores = posts.addIdfScore(scores, term, weight, nbDoc, optimization, idf_threshold, addition, weight_addition);
 					}
 				}
 				Iterator<String> keys=scores.keySet().iterator();

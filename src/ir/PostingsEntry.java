@@ -16,7 +16,7 @@ public class PostingsEntry implements Comparable<PostingsEntry>, Serializable {
     public int docID;
     public double score;
     /** The postings in a document as a linked list. */
-    public LinkedList<Integer> pos;
+    private LinkedList<Integer> pos;
 
 
     public PostingsEntry(int docID) {
@@ -95,6 +95,10 @@ public class PostingsEntry implements Comparable<PostingsEntry>, Serializable {
 
     public void addPos(int position) {
     	pos.add(position);
+    }
+    
+    public void deleteFirstPos() {
+    	pos.removeFirst();
     }
 
     public void changeScore(double score) {
