@@ -61,15 +61,12 @@ public class SearchGUI extends JFrame {
     /**  Lock to prevent simultaneous access to the index. */
     Object indexLock = new Object();
 
-    /**  Directory from which the code is compiled and run. */
-    public static final String homeDir = "C:/Users/user/Downloads/lauraja.tar/lauraja/ir";
-
     /*
      *   The nice logotype
      *   Generated at http://neswork.com/logo-generator/google-font
      */
-    static final String LOGOPIC = homeDir + "/Videoquery.png";
-    static final String BLANKPIC = homeDir + "blank.jpg";
+    static final String LOGOPIC = "Videoquery.png";
+    static final String BLANKPIC = "blank.jpg";
 	
 
     /*  
