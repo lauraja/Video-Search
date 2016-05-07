@@ -217,6 +217,16 @@ public class SearchGUI extends JFrame {
 			    if ( queryType == Index.RANKED_QUERY ) {
 				buf.append( "   " + String.format( "%.5f", results.get(i).score )); 
 			    }
+			 // Convert time in minutes + seconds & add it to the string
+			    buf.append( "\n\tAt: " );
+			    for(int offs: results.get(i).getPos()) {
+			    	int minutes = offs / 60;
+			    	int seconds = offs % 60;
+			    	buf.append(String.format("%02d", minutes) + ":" + String.format("%02d", seconds) + ", ");
+			    }
+			    buf.setLength(buf.length() - 2); // Remove the last extra comma
+			    buf.append( "\n\n" );
+			    
 			    buf.append( "\n" );
 			}
 		    }
@@ -422,10 +432,7 @@ public class SearchGUI extends JFrame {
     public static void main( String[] args ) {
 		SearchGUI s = new SearchGUI();
 		s.createGUI();
-		String[] document = new String[2];
-		document[0] = "-d";
-		document[1] = "C:/Users/user/Downloads/lauraja.tar/lauraja/ir/myFiles";
-		s.decodeArgs(document);
+		s.decodeArgs(args);
 		s.index();
     }
 
