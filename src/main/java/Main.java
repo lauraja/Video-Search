@@ -14,6 +14,8 @@ import static spark.Spark.get;
 import com.heroku.sdk.jdbc.DatabaseUrl;
 
 import ir.SearchWeb;
+import ir.PostingsList;
+import ir.PostingsEntry;
 
 public class Main {
 
@@ -28,12 +30,20 @@ public class Main {
 
             if(q != null) {
                 SearchWeb sw = new SearchWeb(q);
+                sw.index();
+                PostingsList res = sw.search();
+                
+                String message = "";
+                for(PostingsEntry pe: res.getList()) {
+                    message += pe.docID + "<br>";
+                }
+
+                attributes.put("message", message);
                 return new ModelAndView(attributes, "response.ftl");
             } else {
                 return new ModelAndView(attributes, "index.ftl");
             }
         }, new FreeMarkerEngine());
-
     }
 
 }

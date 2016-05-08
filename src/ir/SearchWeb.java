@@ -46,14 +46,19 @@ public class SearchWeb {
     int frameType = Index.ALLFRAMES;
     Object indexLock = new Object();
 
-    SearchWeb(String query) {
-        Query q = new Query(SimpleTokenizer.normalize(query));
-
+    public SearchWeb(String query) {
+        this.query = new Query(SimpleTokenizer.normalize(query));
     }
 
-    private void index() {
+    public void index() {
         synchronized ( indexLock ) {
             indexer.processFiles(new File(SearchWeb.DIRNAME), thresholdProbability);
         }
     }
+    
+    public PostingsList search() {
+        return indexer.index.search(query, queryType, rankingType, frameType, weightPopularity, 
+                popularityScores, distanceFrames, optimization, idf_threshold, addition, weight_addition);
+    }
 }
+
