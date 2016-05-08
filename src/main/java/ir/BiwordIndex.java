@@ -3,7 +3,7 @@
  *   Information Retrieval course at KTH.
  * 
  *   First version: Laura Jacquemod, 2016
- */ 
+ */
 
 package ir;
 

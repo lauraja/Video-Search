@@ -42,14 +42,14 @@ public class SimpleTokenizer {
 
 	/** Handling of non-standard characters */
 	static final char[] special_char =
-		{ 'á', 'à', 'â', 'å', 'ä', 'é', 'è', 'ê', 'í', 'ñ', 'ö', 'ô', 'ü', 'ú', 'ù', 'û', 'Å', 'Ä', 'Ö', 165, 164, 8222, 182, 184, 732, 8211, 195 };
+		{ 'Ã¡', 'Ã ', 'Ã¢', 'Ã¥', 'Ã¤', 'Ã©', 'Ã¨', 'Ãª', 'Ã­', 'Ã±', 'Ã¶', 'Ã´', 'Ã¼', 'Ãº', 'Ã¹', 'Ã»', 'Ã…', 'Ã„', 'Ã–', 165, 164, 8222, 182, 184, 732, 8211, 195 };
 
 	/** 
 	 *  What special characters should be translated into. 
 	 *  NB: This array should have the same size as the one above!
 	 */
 	static final char[] translation =
-		{ 'a', 'a', 'a', 'å', 'ä', 'e', 'e', 'e', 'i', 'n', 'ö', 'o', 'ü', 'u', 'u', 'u', 'å', 'ä', 'ö', 'å', 'ä', 'ä', 'ö', 'ö', 'ö', 'ö', '#' };
+		{ 'a', 'a', 'a', 'Ã¥', 'Ã¤', 'e', 'e', 'e', 'i', 'n', 'Ã¶', 'o', 'Ã¼', 'u', 'u', 'u', 'Ã¥', 'Ã¤', 'Ã¶', 'Ã¥', 'Ã¤', 'Ã¤', 'Ã¶', 'Ã¶', 'Ã¶', 'Ã¶', '#' };
 
 
 

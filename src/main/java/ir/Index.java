@@ -4,7 +4,7 @@
  * 
  *   First version:  Johan Boye, 2010
  *   Second version: Johan Boye, 2012
- *   Additions: Hedvig Kjellström, 2012-14
+ *   Additions: Hedvig KjellstrÃ¶m, 2012-14
  */  
 
 package ir;

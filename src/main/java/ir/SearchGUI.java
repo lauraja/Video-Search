@@ -3,7 +3,7 @@
  *   Information Retrieval course at KTH.
  * 
  *   First version: Johan Boye, 2012
- *   Additions: Hedvig Kjellström, 2012-14
+ *   Additions: Hedvig KjellstrÃ¶m, 2012-14
  *   Second version: Laura Jacquemod, 2015
  */  
 
