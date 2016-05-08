@@ -13,6 +13,8 @@ import static spark.Spark.get;
 
 import com.heroku.sdk.jdbc.DatabaseUrl;
 
+import ir.SearchWeb;
+
 public class Main {
 
     public static void main(String[] args) {
@@ -20,15 +22,13 @@ public class Main {
         port(Integer.valueOf(System.getenv("PORT")));
         staticFileLocation("/public");
 
-        get("/hello", (req, res) -> "Hello World");
-
         get("/", (request, response) -> {
             Map<String, Object> attributes = new HashMap<>();
-            String query = request.queryParams("q");
+            String q = request.queryParams("q");
 
-            if(query != null) {
-                attributes.put("message", "You entered query: " + query);
-                return new ModelAndView(attributes, "error.ftl");
+            if(q != null) {
+                SearchWeb sw = new SearchWeb(q);
+                return new ModelAndView(attributes, "response.ftl");
             } else {
                 return new ModelAndView(attributes, "index.ftl");
             }
