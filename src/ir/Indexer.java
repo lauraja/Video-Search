@@ -151,7 +151,7 @@ public class Indexer {
 							//At i=0, t =0, so we have to look at second frame
 							Double time = (Double) frame.get("time [s]");
 							int timeFrame = time.intValue();
-							index.docTimeFrame.put( "" + docID, timeFrame);
+							index.docTimeFrame.put( "" + docID, time);
 						}
 						
 						if (probability > thresholdProbability) {
