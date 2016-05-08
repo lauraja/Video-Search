@@ -22,7 +22,7 @@ import java.util.TreeMap;
 public class HashedIndex implements Index {
 
 	/** The index as a hashtable. */
-	private HashMap<String,PostingsList> index = new HashMap<String,PostingsList>();
+	public HashMap<String,PostingsList> index = new HashMap<String,PostingsList>();
 
 	/**
 	 *  Inserts this token in the index.
@@ -254,7 +254,6 @@ public class HashedIndex implements Index {
 		}
 		return null;
 	}
-
 
 	/**
 	 *  No need for cleanup in a HashedIndex.

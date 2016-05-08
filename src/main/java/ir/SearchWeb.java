@@ -36,15 +36,15 @@ public class SearchWeb {
 
     static final String DIRNAME = "myFiles";
 
-    Indexer indexer = new Indexer();
+    public Indexer indexer = new Indexer();
     private Query query; 
     private PostingsList results; 
-    LinkedList<String> dirNames = new LinkedList<String>();
-    int queryType = Index.INTERSECTION_QUERY;
-    int rankingType = Index.TF_IDF;
-    int structureType = Index.UNIGRAM;
-    int frameType = Index.ALLFRAMES;
-    Object indexLock = new Object();
+    private LinkedList<String> dirNames = new LinkedList<String>();
+    private int queryType = Index.INTERSECTION_QUERY;
+    private int rankingType = Index.TF_IDF;
+    private int structureType = Index.UNIGRAM;
+    private int frameType = Index.ALLFRAMES;
+    private Object indexLock = new Object();
 
     public SearchWeb(String query) {
         this.query = new Query(SimpleTokenizer.normalize(query));
